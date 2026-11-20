@@ -2,26 +2,53 @@
 (function () {
   const VCOLOR = { v1: "#9a8f84", v2: "#2f9e8f", v3: "#e07b39", v4: "#c2477f", v5: "#3f6fd8" };
 
+  // A chibi capybara: loaf body, big round head facing you, sparkly eyes, blush, and a scarf in its version color.
+  // opts.acc picks a little extra on its head: "yuzu" (the classic capybara citrus), "flower", "leaf" or none.
+  const INK = "#6b4325";
+  const ACCESSORIES = {
+    yuzu: `<g><circle cx="44.5" cy="5.4" r="3.7" fill="#f8a532" stroke="#b5650f" stroke-width=".9"/>
+           <circle cx="43.3" cy="4.3" r=".9" fill="#fff" opacity=".55"/>
+           <path d="M44.6 1.9 q2.4 -1.9 4.6 -.3 q-2.3 1.5 -4.6 .3 z" fill="#5fb55a" stroke="#3d7f39" stroke-width=".5"/></g>`,
+    flower: `<g transform="translate(55.2 6.6)">${[0, 72, 144, 216, 288].map(a =>
+              `<ellipse cx="0" cy="-2" rx="1.3" ry="1.9" fill="#ffd9e6" stroke="#e58fb0" stroke-width=".45" transform="rotate(${a})"/>`).join("")}
+             <circle r="1.1" fill="#f7c948"/></g>`,
+    leaf: `<path d="M42 7.2 q1.5 -5.6 7 -5.4 q-1.2 5.3 -7 5.4 z" fill="#79c267" stroke="#3f8a35" stroke-width=".6"/>
+           <path d="M42.4 6.8 q2.6 -2.3 5.6 -4.4" stroke="#3f8a35" stroke-width=".45" fill="none"/>`,
+  };
+
   function capySVG(scarf, opts = {}) {
     const flip = opts.flip ? 'transform="translate(64,0) scale(-1,1)"' : "";
-    const hat = opts.hat ? `<path d="M41 7 q8 -9 17 0 z" fill="${scarf}"/><rect x="40" y="6" width="19" height="3" rx="1.5" fill="${scarf}"/>` : "";
+    const acc = ACCESSORIES[opts.hat ? "yuzu" : opts.acc] || "";
     return `<svg viewBox="0 0 64 46" xmlns="http://www.w3.org/2000/svg"><g ${flip}>
-      <ellipse cx="29" cy="28" rx="22" ry="13.5" fill="#b9845a"/>
-      <ellipse cx="25" cy="24" rx="14" ry="7" fill="#c8956a" opacity=".55"/>
-      <rect x="12" y="35" width="6" height="9" rx="3" fill="#8f6141"/>
-      <rect x="22" y="36" width="6" height="8" rx="3" fill="#9c6b48"/>
-      <rect x="34" y="36" width="6" height="8" rx="3" fill="#8f6141"/>
-      <rect x="43" y="35" width="6" height="9" rx="3" fill="#9c6b48"/>
-      <rect x="37" y="9" width="23" height="21" rx="10" fill="#c48f62"/>
-      <ellipse cx="57.5" cy="21" rx="5.5" ry="5" fill="#8b5e3c"/>
-      <circle cx="58.5" cy="19.5" r="1" fill="#3a2717"/>
-      <circle cx="48" cy="16.5" r="2" fill="#2b1d12"/><circle cx="48.6" cy="15.9" r=".6" fill="#fff"/>
-      <ellipse cx="42" cy="10.5" rx="3.2" ry="2.6" fill="#8b5e3c"/>
-      <path d="M50 24 q3 2 6 0" stroke="#5c3d24" stroke-width="1.2" fill="none" stroke-linecap="round"/>
-      <ellipse cx="45" cy="22" rx="2.4" ry="1.5" fill="#e9a58b" opacity=".7"/>
-      <path d="M36 27 q7 6 15 0 l-1 4 q-7 4 -13 0 z" fill="${scarf}"/>
-      ${hat}
+      <g fill="#9e6c44" stroke="${INK}" stroke-width="1.1">
+        <rect x="8.5" y="35" width="6.5" height="9.5" rx="3.2"/><rect x="17" y="36" width="6.5" height="8.5" rx="3.2"/>
+        <rect x="31" y="36" width="6.5" height="8.5" rx="3.2"/><rect x="39.5" y="35" width="6.5" height="9.5" rx="3.2"/>
+      </g>
+      <ellipse cx="24.5" cy="29.5" rx="20" ry="12.8" fill="#c79461" stroke="${INK}" stroke-width="1.3"/>
+      <ellipse cx="20.5" cy="24.6" rx="12" ry="5" fill="#d9ab78" opacity=".7"/>
+      <path d="M8.5 31 q2.5 3.5 6.5 4.5" stroke="${INK}" stroke-width=".8" fill="none" opacity=".45" stroke-linecap="round"/>
+      <rect x="29.5" y="7.5" width="30" height="25" rx="11" fill="#d3a06d" stroke="${INK}" stroke-width="1.3"/>
+      <g stroke="${INK}" stroke-width="1"><ellipse cx="32.6" cy="10.4" rx="2.6" ry="2.2" fill="#a8734a"/><ellipse cx="56.5" cy="10.1" rx="2.6" ry="2.2" fill="#a8734a"/></g>
+      <ellipse cx="32.7" cy="10.7" rx="1.2" ry=".95" fill="#eeb097"/><ellipse cx="56.4" cy="10.4" rx="1.2" ry=".95" fill="#eeb097"/>
+      <ellipse cx="47" cy="24.4" rx="10.4" ry="6.6" fill="#e6c096"/>
+      <g class="eyes">
+        <circle cx="39" cy="16.4" r="2.6" fill="#24160c"/><circle cx="39.9" cy="15.4" r=".95" fill="#fff"/><circle cx="38.3" cy="17.3" r=".42" fill="#fff"/>
+        <circle cx="55" cy="16" r="2.6" fill="#24160c"/><circle cx="55.9" cy="15" r=".95" fill="#fff"/><circle cx="54.3" cy="16.9" r=".42" fill="#fff"/>
+      </g>
+      <ellipse cx="35.8" cy="22.6" rx="2.7" ry="1.6" fill="#f3887c" opacity=".55"/><ellipse cx="57.2" cy="22.2" rx="1.9" ry="1.5" fill="#f3887c" opacity=".55"/>
+      <rect x="43.4" y="19.4" width="7.2" height="3.3" rx="1.65" fill="#5a3620"/><ellipse cx="45.3" cy="21.1" rx=".75" ry=".55" fill="#24140a"/><ellipse cx="48.7" cy="21.1" rx=".75" ry=".55" fill="#24140a"/><ellipse cx="45.6" cy="19.9" rx="1.1" ry=".35" fill="#fff" opacity=".45"/>
+      <path d="M44.55 25 q1.22 1.5 2.45 0 q1.22 1.5 2.45 0" stroke="#4a2c18" stroke-width="1" fill="none" stroke-linecap="round"/>
+      <path d="M32 29.6 q12.5 6.4 25.5 0 l.6 3.6 q-13.3 6.8 -26.7 0 z" fill="${scarf}" stroke="${INK}" stroke-width=".9" stroke-linejoin="round"/>
+      <path d="M36.2 32.6 l-.8 7.2 q2.1 1.2 4.3 0 l-.2 -6.4 z" fill="${scarf}" stroke="${INK}" stroke-width=".9" stroke-linejoin="round"/>
+      ${acc}
     </g></svg>`;
+  }
+
+  // the same capybara always wears the same accessory
+  function accessoryFor(name) {
+    let h = 0;
+    for (const ch of String(name || "")) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    return ["yuzu", "flower", "", "leaf", "yuzu", ""][h % 6];
   }
 
   const B = {
@@ -102,5 +129,5 @@
     return { x: (b.x + W / 2) / 1600, y: (below ? 400 : 372) / 760 };
   }
 
-  window.CAPY = { capySVG, townSVG, anchor, BUILDINGS: B, VCOLOR };
+  window.CAPY = { capySVG, accessoryFor, townSVG, anchor, BUILDINGS: B, VCOLOR };
 })();

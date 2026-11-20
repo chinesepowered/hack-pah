@@ -5,7 +5,7 @@
   const params = new URLSearchParams(location.search);
   const VIDEO = params.has("video");
   if (VIDEO) document.body.classList.add("video");
-  const { capySVG, townSVG, anchor, VCOLOR } = window.CAPY;
+  const { capySVG, accessoryFor, townSVG, anchor, VCOLOR } = window.CAPY;
   const api = (p, opt) => fetch(p, opt).then(r => r.json());
   const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const money = v => `$${Number(v || 0).toFixed(Number(v) < 0.1 ? 4 : 2)}`;
@@ -100,7 +100,8 @@
     const el = document.createElement("div");
     el.className = "capy";
     const v = e.agent_version || "v1";
-    el.innerHTML = `${capySVG(vcol(v))}<div class="capy-name">${esc(e.capy_name)}<span class="ver" style="background:${vcol(v)}">${esc(v)}</span></div><div class="bubble"></div>`;
+    el.style.setProperty("--blink", `${(-Math.random() * 5).toFixed(2)}s`);  // capybaras blink on their own schedules
+    el.innerHTML = `${capySVG(vcol(v), { acc: accessoryFor(e.capy_name) })}<div class="capy-name">${esc(e.capy_name)}<span class="ver" style="background:${vcol(v)}">${esc(v)}</span></div><div class="bubble"></div>`;
     const a = anchor("home");
     el.style.left = `${a.x * 100}%`; el.style.top = `${a.y * 100}%`;
     sprites.appendChild(el);
@@ -373,7 +374,7 @@
         const claimed = (r.claims || []).length > 0;
         if (c.refunded) { cls = firstRefund ? "dupe" : "won"; lab = firstRefund ? "refunded AGAIN" : (claimed ? "won the claim" : "refunded first"); firstRefund = firstRefund || c.capy; }
         else if (c.blocked_duplicates) { cls = "blocked"; lab = "blocked by claim"; }
-        return `<div class="c ${cls}">${capySVG(vcol(c.version))}<div class="r">${esc(c.capy)}</div><div>${lab}</div></div>`;
+        return `<div class="c ${cls}">${capySVG(vcol(c.version), { acc: accessoryFor(c.capy) })}<div class="r">${esc(c.capy)}</div><div>${lab}</div></div>`;
       }).join("");
       return `<div class="race">
         <h3>Race on <span style="color:${vcol(d.agent_version)}">${esc(d.agent_version)}</span></h3>
