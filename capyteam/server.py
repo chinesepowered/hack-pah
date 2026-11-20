@@ -205,6 +205,55 @@ async def casebook(q: str | None = None):
     return {"live": False, "answers": answers, "dataset": cognee_memory.DATASET, "enabled": cognee_memory.enabled()}
 
 
+@app.get("/api/analytics")
+async def analytics_view():
+    """The release experiment's arms (SingleStore) next to what Amplitude reports for the same sessions."""
+    from . import amplitude_charts
+
+    arms = await db().rows(
+        "SELECT variant, agent_version AS version, COUNT(*) AS shifts, SUM(passed) AS done FROM drills "
+        "WHERE campaign_id LIKE 'exp-%' GROUP BY variant, agent_version ORDER BY variant")
+    via = await db().one("SELECT COUNT(*) AS n FROM events WHERE kind = 'start' AND session_id LIKE 'exp-%' AND summary LIKE '%via statsig%'")
+    total = sum(int(a["shifts"]) for a in arms)
+    return {"experiment": {"name": settings.statsig_experiment, "arms": arms, "shifts": total,
+                           "assigned_by_statsig": int((via or {}).get("n", 0))},
+            "amplitude": await amplitude_charts.snapshot()}
+
+
+@app.get("/api/firedrill")
+async def firedrill_view():
+    """The drills as Firedrill scenarios: the library we registered plus the ones night school wrote."""
+    root = ROOT / "firedrill"
+
+    def load(path: Path) -> dict:
+        try:
+            return json.loads(path.read_text())
+        except (OSError, ValueError):
+            return {}
+
+    evals = {p.name.removeprefix("eval.").removesuffix(".json"): load(p) for p in (root / "library").glob("eval.*.json")}
+    library = []
+    for p in sorted((root / "library").glob("scenario.*.json")):
+        sc = load(p)
+        checks, rubric = [], []
+        for ref in sc.get("evaluations", []):
+            ev = evals.get(ref.split(":")[-1], {})
+            rubric.append(ev.get("name"))
+            checks += [f"{c['service']}.{c['operation']} {c['comparison']} {c['expected']}" for c in ev.get("exact_checks", [])]
+        library.append({"name": sc.get("name"), "description": sc.get("description"), "checks": checks, "rubric": [r for r in rubric if r],
+                        "events": [f"{e.get('dependency') or ''} {e.get('kind') or 'event'}".strip() for e in sc.get("events", [])],
+                        "twin": next((c.split(": ")[-1] for c in sc.get("conditions", []) if c.startswith("Practice-yard twin")), None)})
+    generated = []
+    for p in sorted((root / "generated").glob("*.scenario.json")):
+        sc = load(p)
+        ev = load(p.with_name(p.name.replace(".scenario.", ".evaluation.")))
+        src = next((c for c in sc.get("conditions", []) if c.startswith("Generated from")), "")
+        generated.append({"name": (ev.get("name") or sc.get("name") or "").replace("Night school: ", ""), "description": sc.get("description"),
+                          "checks": [f"{c['service']}.{c['operation']} {c['comparison']} {c['expected']}" for c in ev.get("exact_checks", [])],
+                          "source": src.replace("Generated from session ", "").split(" (")[0]})
+    return {"library": library, "generated": generated}
+
+
 @app.get("/api/drills")
 async def drills(limit: int = 200):
     rows = await db().rows("SELECT drill_id, campaign_id, session_id, scenario, agent_version, variant, source, ending, passed, score, results, created_at "

@@ -65,8 +65,12 @@
       </div>
       <div class="versions" id="versions"></div>
       <div class="grid2">
-        <div class="card"><div class="eyebrow">Practice drills passed, by agent version</div><svg id="chart-pass" class="chart" viewBox="0 0 560 260"></svg></div>
-        <div class="card"><div class="eyebrow">Exactly-once race: refunds made for one $38 request</div><svg id="chart-race" class="chart" viewBox="0 0 560 260"></svg></div>
+        <div class="card" id="card-pass"><div class="eyebrow">Practice drills passed, by agent version</div><svg id="chart-pass" class="chart" viewBox="0 0 560 260"></svg></div>
+        <div class="card" id="card-race"><div class="eyebrow">Exactly-once race: refunds made for one $38 request</div><svg id="chart-race" class="chart" viewBox="0 0 560 260"></svg></div>
+      </div>
+      <div class="grid2">
+        <div class="card" id="exp-card"><div class="eyebrow">Statsig experiment · shipped version vs night school's candidate</div><div id="exp"></div></div>
+        <div class="card" id="amp-card"><div class="eyebrow">Amplitude Agent Analytics · read back through Amplitude's API</div><div id="amp"></div></div>
       </div>
       <div class="card"><div class="eyebrow">How CapyTeam got better</div><ol class="timeline" id="timeline"></ol></div>
     </section>
@@ -79,7 +83,8 @@
       </div>
       <div class="lessons" id="lessons"></div>
       <div class="card casebook" id="casebook-card"><div class="eyebrow">Cognee casebook · knowledge graph of every shift, incident and lesson</div><div id="casebook"></div></div>
-      <div class="card"><div class="eyebrow">New fire drills written by night school</div><ul class="drills" id="gen-drills"></ul></div>
+      <div class="card" id="drills-card"><div class="eyebrow">New fire drills written by night school · Firedrill scenarios with exact checks</div><ul class="drills" id="gen-drills"></ul>
+        <div class="eyebrow" style="margin-top:14px">The Firedrill library we registered</div><ul class="drills" id="lib-drills"></ul></div>
     </section>
 
     <!-- ============ RACE ============ -->
@@ -103,5 +108,6 @@
   <div class="caption" id="caption"></div>
   <script src="/static/capy.js"></script>
   <script src="/static/app.js"></script>
+  <script src="/static/present.js"></script>
 </body>
 </html>

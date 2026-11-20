@@ -83,7 +83,7 @@ class Flags:
 
     def log_shift(self, unit_id: str, *, done: bool, version: str, variant: str, provider: str, scenario: str | None,
                   cost_usd: float, ended_ms: int | None = None) -> None:
-        """Each shift's outcome as a Statsig event; capyteam_shift_done is the experiment's primary metric."""
+        """Each shift's outcome as a Statsig event (capyteam_shift_done / capyteam_shift_failed), for the experiment's metrics."""
         if not self._init():
             return
         try:

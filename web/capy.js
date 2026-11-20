@@ -35,6 +35,10 @@
         <circle cx="39" cy="16.4" r="2.6" fill="#24160c"/><circle cx="39.9" cy="15.4" r=".95" fill="#fff"/><circle cx="38.3" cy="17.3" r=".42" fill="#fff"/>
         <circle cx="55" cy="16" r="2.6" fill="#24160c"/><circle cx="55.9" cy="15" r=".95" fill="#fff"/><circle cx="54.3" cy="16.9" r=".42" fill="#fff"/>
       </g>
+      <g class="eyes-happy" fill="none" stroke="#24160c" stroke-width="1.5" stroke-linecap="round">
+        <path d="M36.5 17.4 q2.5 -3.4 5 0"/><path d="M52.5 17 q2.5 -3.4 5 0"/>
+      </g>
+      <path class="sweat" d="M61 8.6 q2.6 3.8 0 5.6 q-2.6 -1.8 0 -5.6 z" fill="#8fd0f5" stroke="#3b8fc4" stroke-width=".6"/>
       <ellipse cx="35.8" cy="22.6" rx="2.7" ry="1.6" fill="#f3887c" opacity=".55"/><ellipse cx="57.2" cy="22.2" rx="1.9" ry="1.5" fill="#f3887c" opacity=".55"/>
       <rect x="43.4" y="19.4" width="7.2" height="3.3" rx="1.65" fill="#5a3620"/><ellipse cx="45.3" cy="21.1" rx=".75" ry=".55" fill="#24140a"/><ellipse cx="48.7" cy="21.1" rx=".75" ry=".55" fill="#24140a"/><ellipse cx="45.6" cy="19.9" rx="1.1" ry=".35" fill="#fff" opacity=".45"/>
       <path d="M44.55 25 q1.22 1.5 2.45 0 q1.22 1.5 2.45 0" stroke="#4a2c18" stroke-width="1" fill="none" stroke-linecap="round"/>
@@ -86,7 +90,7 @@
     const b = B[key];
     const x = b.x, y = b.y;
     const roofPts = `${x - 10},${y + 52} ${x + W / 2},${y} ${x + W + 10},${y + 52}`;
-    const windows = [0, 1, 2].map(i => `<rect x="${x + 22 + i * 64}" y="${y + 70}" width="44" height="30" rx="6" fill="#fffbe9" stroke="#7a5b3c" stroke-width="2"/>`).join("");
+    const windows = [0, 1, 2].map(i => `<rect class="win" x="${x + 22 + i * 64}" y="${y + 70}" width="44" height="30" rx="6" fill="#fffbe9" stroke="#7a5b3c" stroke-width="2"/>`).join("");
     return `<g class="building" id="b-${key}">
       <ellipse class="glow" cx="${x + W / 2}" cy="${y + H - 10}" rx="${W * 0.72}" ry="62" fill="${b.roof}"/>
       <rect x="${x + 6}" y="${y + 50}" width="${W - 12}" height="${H - 50}" rx="10" fill="${b.wall}" stroke="#7a5b3c" stroke-width="3"/>
@@ -118,7 +122,11 @@
       ${Array.from({ length: 32 }, (_, i) => `<rect x="${i * 52 + 8}" y="378" width="28" height="6" rx="3" fill="#fff6e3"/>`).join("")}
       <path d="M790 640 q120 -30 260 0 v120 h-260 z" fill="#9fd3ea" opacity=".9"/>
       ${trees}${flowers}
-      ${Object.keys(B).map(building).join("")}
+      ${Object.keys(B).filter(k => k !== "school").map(building).join("")}
+      <rect class="nightshade" width="1600" height="760" fill="#131c44"/>
+      <g class="nightsky">${Array.from({ length: 34 }, (_, i) => `<circle cx="${(i * 211 + 37) % 1580 + 10}" cy="${(i * 97 + 13) % 300 + 8 + (i % 3) * 150}" r="${1.2 + (i % 3) * 0.7}" fill="#fff6c9" opacity="${0.5 + (i % 4) * 0.12}"/>`).join("")}
+        <path transform="translate(1540 46) rotate(-24)" d="M0 -26 A26 26 0 0 0 0 26 A36 36 0 0 1 0 -26 Z" fill="#fff3bf"/></g>
+      ${building("school")}
     `;
   }
 

@@ -168,12 +168,13 @@ async def judge(transcript: str, question: str, usage=None) -> tuple[bool, str]:
 
 
 # ---------------------------------------------------------------------- one drill
-async def run_drill(name: str, *, version: str | None, run_id: str, capy: str | None = None) -> dict:
+async def run_drill(name: str, *, version: str | None, run_id: str, capy: str | None = None,
+                    release: tuple[str, str] | None = None) -> dict:
     sc = SCENARIOS[name]
     world = f"{run_id}-{name}"
     sandbox.reset_world(world, name)
     s = await open_session(f"{run_id}-{name}", mode="practice", source="sandbox", world_id=world, invoke_urls=yard_urls(world),
-                           scenario=name, version=version, capy=capy)
+                           scenario=name, version=version, capy=capy, release=release)
     transcript = []
     for turn in sc["turns"]:
         reply = await s.respond(turn)
@@ -204,7 +205,8 @@ async def run_drill(name: str, *, version: str | None, run_id: str, capy: str | 
     s.note_event("verdict", "school", f"Drill '{sc['title']}': {'PASS' if passed else 'FAIL'} ({score}/100)", verdict)
     await s.end(status="done" if passed else "failed")
     SESSIONS.pop(s.id, None)
-    return {"scenario": name, "session": s.id, "capy": s.capy, "version": s.version, "passed": passed, "score": score, "results": results,
+    return {"scenario": name, "session": s.id, "capy": s.capy, "version": s.version, "variant": s.variant, "provider": s.flag_provider,
+            "passed": passed, "score": score, "results": results,
             "credits": round(s.usage.credits, 1), "cost_usd": s.usage.cost_usd, "tools": s.tool_count}
 
 

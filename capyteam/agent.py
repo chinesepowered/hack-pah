@@ -280,11 +280,13 @@ SESSIONS: dict[str, Session] = {}
 
 
 async def open_session(key: str, *, mode: str, source: str, world_id: str, invoke_urls: dict[str, str], scenario: str | None = None,
-                       campaign_id: str | None = None, version: str | None = None, capy: str | None = None) -> Session:
+                       campaign_id: str | None = None, version: str | None = None, capy: str | None = None,
+                       release: tuple[str, str] | None = None) -> Session:
+    """`release` = (shipped, candidate) runs this shift as part of that experiment instead of the current release state."""
     if key in SESSIONS:
         return SESSIONS[key]
     await memory.ensure_v1()
-    shipped, candidate = await memory.release_state()
+    shipped, candidate = release or await memory.release_state()
     if version:
         a_version, variant, provider = version, "pinned", "pinned"
     else:

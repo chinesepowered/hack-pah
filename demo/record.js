@@ -1,11 +1,13 @@
-// Records the CapyTeam app scene by scene (timed to the narration) with Playwright.
-// usage: node demo/record.js demo/build/scenes.json demo/build
+// Records the CapyTeam app for the demo video with Playwright.
+// The plan (demo/build/plan.json, written by make_video.py) is a list of scenes; each scene is a list of
+// timed steps, and each step calls one of the app's presentation functions (web/present.js) with real data.
+// usage: node demo/record.js demo/build/plan.json demo/build
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 
 (async () => {
-  const scenes = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
+  const plan = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
   const outDir = process.argv[3];
   const base = process.env.CAPY_URL || 'http://127.0.0.1:8787';
   const browser = await chromium.launch();
@@ -14,73 +16,50 @@ const path = require('path');
   const page = await context.newPage();
   page.on('pageerror', e => console.log('pageerror:', e.message));
   await page.goto(`${base}/?video=1&still=1`, { waitUntil: 'networkidle' });
-  await page.waitForTimeout(1200);
-  fs.writeFileSync(path.join(outDir, 'lead.txt'), String((Date.now() - t0) / 1000));
+  const call = (fn, args) => page.evaluate(([f, a]) => {
+    if (typeof window[f] !== 'function') throw new Error(`no such presentation function: ${f}`);
+    window[f](...a);
+  }, [fn, args || []]);
 
+  // warm the data the proof shots need, so nothing is still loading on camera
+  await page.evaluate(async () => { await Promise.all(['/api/analytics', '/api/firedrill', '/api/lessons', '/api/casebook'].map(u => fetch(u).then(r => r.json()).catch(() => null))); });
+  for (const tab of ['score', 'school', 'race']) { await call('capTab', [tab]); await page.waitForTimeout(700); }
+  await page.waitForFunction(() => document.querySelector('#exp')?.children.length > 0, null, { timeout: 30000 }).catch(() => console.log('warning: analytics card empty'));
+  for (const s of plan.pre || []) await call(s.fn, s.args);
+  await page.waitForTimeout(900);
+
+  // sync marker: a small magenta square flashed shortly before the zero point. make_video.py finds it in the
+  // recording, so the trim is exact (the recorder's own clock runs a few hundred ms ahead of the first frame).
   await page.evaluate(() => {
-    window.capShowImages = (urls, ms) => {
-      window.capHideImages();
-      const o = document.createElement('div');
-      o.id = 'capshots';
-      o.style.cssText = 'position:fixed;inset:0;z-index:60;background:#f4ecdd;display:flex;align-items:center;justify-content:center;';
-      const per = ms / urls.length;
-      urls.forEach((u, i) => {
-        const im = document.createElement('img');
-        im.src = u;
-        im.style.cssText = `position:absolute;max-width:90vw;max-height:78vh;border-radius:14px;box-shadow:0 18px 50px rgba(60,40,20,.28);
-          opacity:${i ? 0 : 1};transform:scale(1);transition:opacity .7s ease, transform ${per / 1000 + 1}s linear;`;
-        o.appendChild(im);
-        setTimeout(() => { im.style.opacity = 1; im.style.transform = 'scale(1.045)'; }, i * per + 30);
-        if (i < urls.length - 1) setTimeout(() => { im.style.opacity = 0; }, (i + 1) * per);
-      });
-      document.body.appendChild(o);
-    };
-    window.capHideImages = () => document.getElementById('capshots')?.remove();
+    const m = document.createElement('div');
+    m.id = 'syncmark';
+    m.style.cssText = 'position:fixed;left:0;top:0;width:20px;height:20px;background:#ff00ff;z-index:99999';
+    document.body.appendChild(m);
   });
-  const sessions = await (await fetch(`${base}/api/sessions?limit=400`)).json();
-  const firstOf = prefix => (sessions.find(s => s.session_id.startsWith(prefix)) || sessions.find(s => s.session_id.includes(prefix)) || {}).session_id;
-  let lastReplay = null;
+  const marked = Date.now();
+  await page.waitForTimeout(240);
+  await page.evaluate(() => { const m = document.getElementById('syncmark'); m.parentNode.removeChild(m); });
+  await page.waitForTimeout(560);
 
-  for (const sc of scenes) {
-    const ms = Math.round(sc.seconds * 1000);
-    const [kind, arg] = sc.action.split(':');
-    const start = Date.now();
-    if (kind !== 'image') await page.evaluate(() => window.capHideImages());
-    if (kind === 'image') {
-      await page.evaluate(([u, d]) => window.capShowImages(u, d), [arg.split(','), ms]);
-    } else if (kind === 'town') {
-      await page.evaluate(() => window.capTab('town'));
-      if (arg && arg !== lastReplay) {
-        const has = sessions.some(s => s.session_id.startsWith(arg));
-        const prefix = has ? arg : 'day3';
-        await page.evaluate(() => window.capReset && window.capReset());
-        // pick a speed so the replay roughly fills the remaining scenes that use it
-        const span = scenes.filter(s => s.action === sc.action).reduce((a, s) => a + s.seconds, 0);
-        await page.evaluate(([p, sp]) => { window.capReplay(p, sp); }, [prefix, Math.max(1.2, 60 / Math.max(10, span))]);
-        lastReplay = arg;
-      }
-    } else if (kind === 'shifts') {
-      await page.evaluate(() => window.capTab('shifts'));
-      await page.waitForTimeout(900);
-      const id = firstOf(arg);
-      if (id) await page.evaluate(i => window.capTranscript(i), id);
-    } else if (kind === 'school' || kind === 'score' || kind === 'race') {
-      await page.evaluate(k => window.capTab(k), kind);
-      await page.waitForTimeout(900);
-      if (arg) await page.evaluate(id => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), arg);
-      else await page.evaluate(() => window.scrollTo({ top: 0 }));
+  // the video's zero point: everything before it is trimmed off
+  const start = Date.now();
+  fs.writeFileSync(path.join(outDir, 'lead.txt'), String((start - t0) / 1000));
+  fs.writeFileSync(path.join(outDir, 'sync.json'), JSON.stringify({ markToStart: (start - marked) / 1000 }));
+  let sceneStart = start;
+  for (const sc of plan.scenes) {
+    const steps = [...sc.steps].sort((a, b) => a.t - b.t);
+    for (const s of steps) {
+      const wait = sceneStart + s.t * 1000 - Date.now();
+      if (wait > 0) await page.waitForTimeout(wait);
+      await call(s.fn, s.args).catch(e => console.log(`step failed in ${sc.id}: ${s.fn}: ${e.message.split('\n')[0]}`));
     }
-    await page.evaluate(([t, d]) => window.capCaption(t, d), [sc.caption, Math.max(2500, ms - 600)]);
-    // gentle scroll on long pages halfway through the scene
-    if ((kind === 'school' || kind === 'score') && !arg) {
-      await page.waitForTimeout(Math.round(ms * 0.55));
-      await page.evaluate(() => window.scrollBy({ top: 380, behavior: 'smooth' }));
-    }
-    const left = ms - (Date.now() - start);
+    sceneStart += sc.seconds * 1000;
+    const left = sceneStart - Date.now();
     if (left > 0) await page.waitForTimeout(left);
+    else if (left < -150) console.log(`warning: scene ${sc.id} overran by ${-left} ms`);
   }
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(500);
   await context.close();
   await browser.close();
-  console.log('recorded', scenes.length, 'scenes in', ((Date.now() - t0) / 1000).toFixed(1), 's');
+  console.log('recorded', plan.scenes.length, 'scenes in', ((Date.now() - start) / 1000).toFixed(1), 's');
 })();
