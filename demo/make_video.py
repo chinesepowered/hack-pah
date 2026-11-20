@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
 import os
 import subprocess
 import sys
@@ -48,8 +49,39 @@ async def facts() -> dict:
     for (v, _), d in fd.items():
         p, n = fdtools.get(v, (0, 0))
         fdtools[v] = (p + int(d["passed"]), n + 1)
+    shots = sorted(p for p in (ROOT / "docs" / "amplitude").glob("*") if p.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp", ".gif"))
     return {"v1": day("v1"), "v2": day("v2"), "v3": day("v3"), "race": race, "lessons": o.get("lessons"), "events": o.get("events"),
-            "cost": costs, "blocked": o.get("duplicates_blocked"), "fdtools": fdtools}
+            "cost": costs, "blocked": o.get("duplicates_blocked"), "fdtools": fdtools,
+            "amp_pass": await amplitude_pass_rates(), "amp_images": [f"/docs/amplitude/{p.name}" for p in shots]}
+
+
+async def amplitude_pass_rates() -> dict[str, tuple[int, int]]:
+    """Drill pass rate by agent version, read back from Amplitude's Dashboard REST API (what the Amplitude chart shows)."""
+    if not (settings.amplitude_api_key and settings.amplitude_secret_key):
+        return {}
+
+    async def totals(extra: list[dict]) -> dict[str, float]:
+        e = {"event_type": "[Agent] Score", "group_by": [{"type": "event", "value": "[Agent] Agent Version"}],
+             "filters": [{"subprop_type": "event", "subprop_key": "[Agent] Score Name", "subprop_op": "is", "subprop_value": ["drill-pass"]}] + extra}
+        async with httpx.AsyncClient(timeout=60, auth=(settings.amplitude_api_key, settings.amplitude_secret_key)) as c:
+            r = await c.get("https://amplitude.com/api/2/events/segmentation",
+                            params={"e": json.dumps(e), "m": "totals", "start": "20261101", "end": time.strftime("%Y%m%d")})
+        r.raise_for_status()
+        d = r.json()["data"]
+        labels = [x[1] if isinstance(x, list) and len(x) > 1 else x for x in d.get("seriesLabels", [])]
+        return dict(zip(labels, [sum(v.get("value", 0) if isinstance(v, dict) else v for v in row) for row in d.get("series", [])]))
+
+    try:
+        allv = await totals([])
+        ok = await totals([{"subprop_type": "event", "subprop_key": "[Agent] Score Value", "subprop_op": "is", "subprop_value": ["1", "1.0"]}])
+        return {v: (int(ok.get(v, 0)), int(n)) for v, n in allv.items() if n}
+    except Exception as e:  # noqa: BLE001 - the video still renders without Amplitude's numbers
+        print("amplitude pass rates unavailable:", e)
+        return {}
+
+
+def pct(pair: tuple[int, int] | None) -> int:
+    return round(100 * pair[0] / pair[1]) if pair and pair[1] else 0
 
 
 def scenes(f: dict) -> list[dict]:
@@ -77,9 +109,20 @@ def scenes(f: dict) -> list[dict]:
          "text": "Night school also keeps a casebook in Cognee. Every shift and every case file goes into Cognee's knowledge graph, "
                  "and the coach recalls related incidents before it writes a lesson. Ask it about Jess Park, and it remembers the cracked mug, "
                  "the double refund, and the rule that fixed it."},
-        {"id": "day2", "action": "score", "caption": f"Day two, v2: {v2p} of {v2n} pass",
-         "text": f"Version two goes out as an experiment, wired to Statsig. Each new shift is assigned a version, "
-                 f"and Amplitude Agent Analytics compares the sessions by version and variant. Version two passes {v2p} of {v2n}."},
+        *([{"id": "day2", "action": "score", "caption": f"Day two, v2: {v2p} of {v2n} pass",
+            "text": f"Version two goes out as an experiment, wired to Statsig, and passes {v2p} of {v2n} practice chores."},
+           {"id": "amplitude", "action": "image:" + ",".join(f["amp_images"]), "caption": "Amplitude Agent Analytics: every shift, by version",
+            "text": "Every shift also lands in Amplitude Agent Analytics. Its charts track session quality, cost and latency for the whole team. "
+                    + (f"Split by agent version, the drill pass rate climbs from {pct(f['amp_pass'].get('v1'))} percent on version one "
+                       + (f"to {pct(f['amp_pass'].get('v2'))} percent on versions two and three."
+                          if pct(f['amp_pass'].get('v2')) == pct(f['amp_pass'].get('v3')) else
+                          f"to {pct(f['amp_pass'].get('v2'))} percent on version two and {pct(f['amp_pass'].get('v3'))} on version three.")
+                       if all(f["amp_pass"].get(v) for v in ("v1", "v2", "v3")) else
+                       "Split by agent version, you can watch each night's lessons pay off.")}]
+          if f.get("amp_images") else
+          [{"id": "day2", "action": "score", "caption": f"Day two, v2: {v2p} of {v2n} pass",
+            "text": f"Version two goes out as an experiment, wired to Statsig. Each new shift is assigned a version, "
+                    f"and Amplitude Agent Analytics compares the sessions by version and variant. Version two passes {v2p} of {v2n}."}]),
         {"id": "race2", "action": "race", "caption": f"The race on v2: {r2.get('refunds', 2)} refunds for one request",
          "text": f"Then the inbox gets busy. Ten capybaras pick up the same customer email at the same moment. "
                  f"Version two refunds Jess {r2.get('refunds', 2)} times and emails her {r2.get('emails', 10)} times. No lesson so far covered teammates."},
@@ -94,9 +137,9 @@ def scenes(f: dict) -> list[dict]:
                   + " Every night-school lesson adds a new drill, so the suite grows with every mistake."}
          if f.get("fdtools") and all(n >= 3 for _, n in f["fdtools"].values()) and len(f["fdtools"]) >= 2 else
          {"id": "firedrill", "action": "school:gen-drills", "caption": "Firedrill: a synthetic Stripe, QuickBooks and Gmail world",
-          "text": "Firedrill is where the drills live. CapyTeam is registered in a Firedrill world with synthetic Stripe, QuickBooks and Gmail. "
-                  "Its drills cover a repeated refund, a Stripe outage and a large refund that needs approval, with exact checks on the tool calls. "
-                  "Every night-school lesson adds a new Firedrill drill, so the test suite grows with every mistake."}),
+          "text": "Firedrill is where the drills live: a world with synthetic Stripe, QuickBooks and Gmail, covering repeated refunds, "
+                  "outages and big refunds, with exact checks on the tool calls. Every night-school lesson adds a new drill, "
+                  "so the suite grows with every mistake."}),
         {"id": "airbyte", "action": "shifts:live", "caption": "Live mode: Airbyte's Stripe connector, on practice data",
          "text": "In live mode, the same agent reads Stripe through Airbyte's agent connector, here on a month of practice history. "
                  "It inspects the connector, reads its docs, then queries, and reconciles what Stripe says against what the team recorded in SingleStore."},

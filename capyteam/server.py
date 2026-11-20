@@ -287,6 +287,8 @@ async def jobs():
 # ---------------------------------------------------------------------- static UI
 if WEB.exists():
     app.mount("/static", StaticFiles(directory=WEB), name="static")
+if (ROOT / "docs").exists():  # README screenshots, and the Amplitude charts the demo video shows
+    app.mount("/docs", StaticFiles(directory=ROOT / "docs"), name="docs")
 
 
 @app.get("/")

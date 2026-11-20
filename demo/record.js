@@ -17,6 +17,26 @@ const path = require('path');
   await page.waitForTimeout(1200);
   fs.writeFileSync(path.join(outDir, 'lead.txt'), String((Date.now() - t0) / 1000));
 
+  await page.evaluate(() => {
+    window.capShowImages = (urls, ms) => {
+      window.capHideImages();
+      const o = document.createElement('div');
+      o.id = 'capshots';
+      o.style.cssText = 'position:fixed;inset:0;z-index:60;background:#f4ecdd;display:flex;align-items:center;justify-content:center;';
+      const per = ms / urls.length;
+      urls.forEach((u, i) => {
+        const im = document.createElement('img');
+        im.src = u;
+        im.style.cssText = `position:absolute;max-width:90vw;max-height:78vh;border-radius:14px;box-shadow:0 18px 50px rgba(60,40,20,.28);
+          opacity:${i ? 0 : 1};transform:scale(1);transition:opacity .7s ease, transform ${per / 1000 + 1}s linear;`;
+        o.appendChild(im);
+        setTimeout(() => { im.style.opacity = 1; im.style.transform = 'scale(1.045)'; }, i * per + 30);
+        if (i < urls.length - 1) setTimeout(() => { im.style.opacity = 0; }, (i + 1) * per);
+      });
+      document.body.appendChild(o);
+    };
+    window.capHideImages = () => document.getElementById('capshots')?.remove();
+  });
   const sessions = await (await fetch(`${base}/api/sessions?limit=400`)).json();
   const firstOf = prefix => (sessions.find(s => s.session_id.startsWith(prefix)) || sessions.find(s => s.session_id.includes(prefix)) || {}).session_id;
   let lastReplay = null;
@@ -25,7 +45,10 @@ const path = require('path');
     const ms = Math.round(sc.seconds * 1000);
     const [kind, arg] = sc.action.split(':');
     const start = Date.now();
-    if (kind === 'town') {
+    if (kind !== 'image') await page.evaluate(() => window.capHideImages());
+    if (kind === 'image') {
+      await page.evaluate(([u, d]) => window.capShowImages(u, d), [arg.split(','), ms]);
+    } else if (kind === 'town') {
       await page.evaluate(() => window.capTab('town'));
       if (arg && arg !== lastReplay) {
         const has = sessions.some(s => s.session_id.startsWith(arg));
