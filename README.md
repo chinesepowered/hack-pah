@@ -30,7 +30,7 @@ Every number above is a query on SingleStore Helios: 1,451 session events from 6
 ![Night school: the coach turns each failed shift into a lesson and a policy](docs/night-school.png)
 
 1. **Day shift.** Each capybara is one agent session. It works Stripe, QuickBooks and Gmail through tool calls, and every message, tool call and dollar moved is written to SingleStore and sent to Amplitude Agent Analytics, tagged with the agent version and experiment group.
-2. **Fire drills.** Chores built to break the agent: a repeated request, a Stripe outage mid-refund, a refund above the approval limit, a phishing email from a fake owner address, ten agents on one email. They are written as Firedrill scenarios with exact checks on the money calls, and run in a practice yard that speaks Firedrill's tool contract.
+2. **Fire drills.** Chores built to break the agent: a repeated request, a Stripe outage mid-refund, a refund above the approval limit, a phishing email from a fake owner address, ten agents on one email. They are written as Firedrill scenarios with exact checks on the money calls.
 3. **Night school.** A coach reads each failed session back from SingleStore and asks the Cognee casebook for related incidents. It writes one lesson, switches on the harness policy that prevents the failure, and writes a new drill that reproduces it.
 4. **Ship it as an experiment.** The new version goes out as a Statsig experiment: Statsig assigns each shift to the shipped version or the candidate, and the outcome of every shift is compared by version in Amplitude and reported back to Statsig.
 
@@ -100,11 +100,11 @@ The town UI is a live view of SingleStore: each capybara is a running session, e
 ![Scoreboard: versions, the Statsig experiment, and Amplitude's numbers read back into the app](docs/scoreboard.png)
 
 - **Every shift is an Amplitude agent session** (Amplitude AI SDK): `[Agent] User Message`, `[Agent] AI Response` (model, tokens, cost, latency), `[Agent] Tool Call` (input, output, success, latency), an explicit `[Agent] Session End`, and each drill check and verdict as an `[Agent] Score`.
-- **Versions and experiment groups are on every event**, so Amplitude compares versions directly. As Amplitude reports it across every run we sent, the drill pass rate is **52% on v1 (13 of 25), 100% on v2 (26 of 26) and 100% on v3 (7 of 7)**.
+- **Versions and experiment groups are on every event**, so Amplitude compares versions directly. As Amplitude reports it, the drill pass rate is **52% on v1 (13 of 25), 100% on v2 (26 of 26) and 100% on v3 (7 of 7)**.
 - **Amplitude's numbers come back into the product.** The scoreboard reads them through Amplitude's Dashboard REST API ([`capyteam/amplitude_charts.py`](capyteam/amplitude_charts.py)) and shows them next to SingleStore's.
 - **The release is a real Statsig experiment.** `capyteam_agent_release` assigns each new shift to Control (the shipped version) or Test (night school's candidate). We ran the v1 → v2 release through it: Statsig assigned all 14 shifts, **Control finished 2 of 5 chores, Test finished 9 of 9**, and Amplitude shows the same split by experiment group.
 - **Outcomes go back to Statsig.** Every shift logs `capyteam_shift_done` or `capyteam_shift_failed` with its cost, so the experiment's metrics come straight from the agents' own results.
-- **The loop back into night school.** The coach is wired to add Amplitude's own session signals to its evidence through the Agent Analytics export API ([`capyteam/amplitude_export.py`](capyteam/amplitude_export.py)) whenever that API is available for the project.
+- **The loop back into night school.** With the secret key set, the coach also pulls Amplitude's own session signals through the Agent Analytics export API ([`capyteam/amplitude_export.py`](capyteam/amplitude_export.py)).
 
 ### Firedrill: a real finance use case, drilled before it touches money
 
