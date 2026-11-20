@@ -45,6 +45,8 @@ class Settings:
     # Amplitude Agent Analytics (+ optional secret key for the export API).
     amplitude_api_key: str = field(default_factory=lambda: _env("AMPLITUDE_API_KEY"))
     amplitude_secret_key: str = field(default_factory=lambda: _env("AMPLITUDE_SECRET_KEY"))
+    # "proxy": the sandbox's network proxy injects the export API's Basic auth, so the secret never sits in .env
+    amplitude_export_auth: str = field(default_factory=lambda: _env("AMPLITUDE_EXPORT_AUTH"))
 
     # Statsig rolls out agent versions.
     statsig_server_secret: str = field(default_factory=lambda: _env("STATSIG_SERVER_SECRET"))
