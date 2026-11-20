@@ -104,8 +104,14 @@ class Flags:
             return Assignment(shipped, "shipped", "none")
         a = self.statsig_assignment(unit_id)
         if a:
-            group, use_candidate = a  # the experiment's use_candidate parameter decides; the group name is the fallback
-            is_test = use_candidate if use_candidate is not None else group.lower() not in ("control", "default")
+            group, use_candidate = a
+            name = group.strip().lower()
+            if name in ("control", "default"):        # Control always runs the shipped version
+                is_test = False
+            elif name in ("test", "treatment", "candidate", "variant"):  # Test always runs night school's candidate
+                is_test = True
+            else:                                      # custom group names: the use_candidate parameter decides
+                is_test = use_candidate if use_candidate is not None else True
             return Assignment(candidate if is_test else shipped, group, "statsig")
         h = int(hashlib.sha256(unit_id.encode()).hexdigest(), 16) % 2
         return Assignment(candidate if h else shipped, "Test" if h else "Control", "capyteam-hash")
