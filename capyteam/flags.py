@@ -10,6 +10,7 @@ hash split and labels the provider accordingly, so no data is mislabeled as Stat
 
 from __future__ import annotations
 
+import atexit
 import hashlib
 import logging
 import threading
@@ -46,40 +47,72 @@ class Flags:
 
                 statsig.initialize(settings.statsig_server_secret, StatsigOptions(tier="production", init_timeout=8))
                 self._ok = True
+                atexit.register(self.shutdown)  # scripts exit right after their last shift: send queued events first
             except Exception as e:  # noqa: BLE001
                 log.warning("Statsig unavailable: %s", e)
                 self._ok = False
             return self._ok
 
-    def statsig_group(self, unit_id: str, log_exposure: bool = True) -> str | None:
+    @staticmethod
+    def _user(unit_id: str):
+        from statsig import StatsigUser
+
+        return StatsigUser(user_id=unit_id, custom_ids={"agent_session": unit_id})
+
+    def statsig_assignment(self, unit_id: str, log_exposure: bool = True) -> tuple[str, bool | None] | None:
+        """(group, use_candidate) from the release experiment, or None when Statsig isn't serving it."""
         if not self._init():
             return None
         try:
-            from statsig import StatsigUser, statsig
+            from statsig import statsig
 
-            user = StatsigUser(user_id=unit_id, custom_ids={"agent_session": unit_id})
             get = statsig.get_experiment if log_exposure else statsig.get_experiment_with_exposure_logging_disabled
-            exp = get(user, settings.statsig_experiment)
+            exp = get(self._user(unit_id), settings.statsig_experiment)
             group = exp.get_group_name() if hasattr(exp, "get_group_name") else getattr(exp, "group_name", None)
-            return group or None
+            if not group:
+                return None
+            use_candidate = exp.get("use_candidate", None)
+            return group, (bool(use_candidate) if use_candidate is not None else None)
         except Exception as e:  # noqa: BLE001
             log.warning("Statsig get_experiment failed: %s", e)
             return None
+
+    def statsig_group(self, unit_id: str, log_exposure: bool = True) -> str | None:
+        a = self.statsig_assignment(unit_id, log_exposure)
+        return a[0] if a else None
+
+    def log_shift(self, unit_id: str, *, done: bool, version: str, variant: str, provider: str, scenario: str | None,
+                  cost_usd: float, ended_ms: int | None = None) -> None:
+        """Each shift's outcome as a Statsig event; capyteam_shift_done is the experiment's primary metric."""
+        if not self._init():
+            return
+        try:
+            from statsig import StatsigEvent, statsig
+
+            extra = {"_time": ended_ms} if ended_ms else {}
+            statsig.log_event(StatsigEvent(self._user(unit_id), "capyteam_shift_done" if done else "capyteam_shift_failed",
+                                           value=round(float(cost_usd or 0), 6),
+                                           metadata={"agent_version": version, "variant": variant, "provider": provider,
+                                                     "scenario": scenario or ""}, **extra))
+        except Exception as e:  # noqa: BLE001 - analytics must never break a shift
+            log.warning("Statsig log_event failed: %s", e)
 
     def assign(self, unit_id: str, shipped: str, candidate: str | None) -> Assignment:
         if settings.agent_version:
             return Assignment(settings.agent_version, "pinned", "pinned")
         if not candidate or candidate == shipped:
             return Assignment(shipped, "shipped", "none")
-        group = self.statsig_group(unit_id)
-        if group:
-            is_test = group.lower() not in ("control", "default")
+        a = self.statsig_assignment(unit_id)
+        if a:
+            group, use_candidate = a  # the experiment's use_candidate parameter decides; the group name is the fallback
+            is_test = use_candidate if use_candidate is not None else group.lower() not in ("control", "default")
             return Assignment(candidate if is_test else shipped, group, "statsig")
         h = int(hashlib.sha256(unit_id.encode()).hexdigest(), 16) % 2
         return Assignment(candidate if h else shipped, "Test" if h else "Control", "capyteam-hash")
 
     def shutdown(self) -> None:
         if self._ok:
+            self._ok = False
             try:
                 from statsig import statsig
 

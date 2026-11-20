@@ -259,6 +259,8 @@ class Session:
         await self.flush_events()
         await self.persist(status=status)
         analytics.end(self)
+        flags.log_shift(self.id, done=status == "done", version=self.version, variant=self.variant, provider=self.flag_provider,
+                        scenario=self.scenario, cost_usd=self.usage.cost_usd)
         try:
             from . import cognee_memory
 
