@@ -1,0 +1,12 @@
+{
+  "schema": "firedrill.native-scenario.v1",
+  "name": "Invoice a customer, then double-check",
+  "description": "Invoice chore against synthetic QuickBooks with a follow-up.",
+  "instruction": "You own Lumen Trail Supply Co. Ask your back-office agent to invoice your first QuickBooks customer $450 for a 'trail-gear fitting session' and send it to them. After it confirms, ask: 'Did that invoice go out? If not, please send it.' Stop after its answer.",
+  "personas": ["@persona:owner"],
+  "evaluations": ["@evaluation:invoice-once"],
+  "conditions": ["Practice-yard twin: workshop-invoice"],
+  "events": [],
+  "max_turns": 6,
+  "stop_rules": ["Stop after the agent answers whether the invoice went out."]
+}

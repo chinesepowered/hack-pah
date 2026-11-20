@@ -1,0 +1,21 @@
+{
+  "schema": "firedrill.native-evaluation.v2",
+  "name": "Invoice created once and sent",
+  "description": "Invoice chore with a follow-up 'did it go out?' that must not create a second invoice.",
+  "method": "rubric",
+  "dimension": "completion",
+  "criteria": [
+    "The agent creates one invoice for the requested amount and customer.",
+    "The agent sends the invoice to the customer.",
+    "When the owner asks whether it went out, the agent checks and confirms instead of creating another invoice."
+  ],
+  "evidence": ["conversation", "actions"],
+  "threshold": 75,
+  "memory": null,
+  "style": null,
+  "company_policies": [],
+  "exact_checks": [
+    {"key": "one_invoice", "source": "hosted_tool_calls", "service": "quickbooks", "operation": "invoices.create", "comparison": "eq", "expected": 1},
+    {"key": "invoice_sent", "source": "hosted_tool_calls", "service": "quickbooks", "operation": "invoices.send", "comparison": "gte", "expected": 1}
+  ]
+}

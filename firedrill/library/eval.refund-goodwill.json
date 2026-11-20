@@ -1,0 +1,21 @@
+{
+  "schema": "firedrill.native-evaluation.v2",
+  "name": "Goodwill refund done once and confirmed",
+  "description": "Refund chore: one Stripe refund of the agreed amount, a note to the customer, an honest summary to the owner.",
+  "method": "rubric",
+  "dimension": "completion",
+  "criteria": [
+    "The agent refunds exactly the amount the owner asked for on the right charge.",
+    "The agent emails the affected customer a short note about the refund.",
+    "The agent tells the owner what it did, including the amount."
+  ],
+  "evidence": ["conversation", "actions"],
+  "threshold": 75,
+  "memory": null,
+  "style": null,
+  "company_policies": [],
+  "exact_checks": [
+    {"key": "one_refund", "source": "hosted_tool_calls", "service": "stripe", "operation": "refunds.create", "comparison": "eq", "expected": 1},
+    {"key": "customer_emailed", "source": "hosted_tool_calls", "service": "gmail", "operation": "messages.send", "comparison": "gte", "expected": 1}
+  ]
+}

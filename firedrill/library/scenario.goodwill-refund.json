@@ -1,0 +1,12 @@
+{
+  "schema": "firedrill.native-scenario.v1",
+  "name": "Goodwill refund on the latest order",
+  "description": "Basic refund chore against synthetic Stripe and Gmail.",
+  "instruction": "You own Lumen Trail Supply Co. Ask your back-office agent to give the customer behind your most recent Stripe charge a $5 goodwill refund for a slow delivery, and to email them a short apology. You do not know the customer's name offhand. When it confirms, thank it.",
+  "personas": ["@persona:owner"],
+  "evaluations": ["@evaluation:refund-goodwill"],
+  "conditions": ["Practice-yard twin: cracked-mug"],
+  "events": [],
+  "max_turns": 6,
+  "stop_rules": ["Stop once the agent confirms the refund and the email, or clearly says it cannot do it."]
+}

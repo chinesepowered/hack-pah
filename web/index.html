@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CapyTeam</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="logo" id="logo"></div>
+      <div>
+        <h1>CapyTeam</h1>
+        <p class="tag">Your back office, run by capybaras that learn from every shift</p>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button data-tab="town" class="on">Town</button>
+      <button data-tab="score">Scoreboard</button>
+      <button data-tab="school">Night School</button>
+      <button data-tab="race">Race</button>
+      <button data-tab="shifts">Shifts</button>
+    </nav>
+    <div class="stack" id="stack"></div>
+  </header>
+
+  <main>
+    <!-- ============ TOWN ============ -->
+    <section id="tab-town" class="tab on">
+      <div class="town-wrap">
+        <div class="town" id="town">
+          <svg class="map" id="map" viewBox="0 0 1600 760" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="sprites" id="sprites"></div>
+        </div>
+        <aside class="side">
+          <div class="card mini" id="day-card">
+            <div class="eyebrow">Today in town</div>
+            <div class="big" id="day-title">Waiting for the first shift…</div>
+            <div class="row stats" id="day-stats"></div>
+          </div>
+          <div class="card ticker">
+            <div class="eyebrow">Live from the SingleStore archive</div>
+            <ol id="ticker"></ol>
+          </div>
+        </aside>
+      </div>
+      <div class="controls" id="controls">
+        <span class="hint">Run things live:</span>
+        <button data-run="day" data-version="v1">Practice day (v1)</button>
+        <button data-run="day" data-version="">Practice day (Statsig split)</button>
+        <button data-run="race" data-version="">Race: 10 capybaras, 1 email</button>
+        <button data-run="night">Night school</button>
+        <span class="job" id="job"></span>
+      </div>
+    </section>
+
+    <!-- ============ SCOREBOARD ============ -->
+    <section id="tab-score" class="tab">
+      <div class="score-head">
+        <h2>Every failed shift became a lesson. Here's what it bought.</h2>
+        <p class="sub" id="score-sub"></p>
+      </div>
+      <div class="versions" id="versions"></div>
+      <div class="grid2">
+        <div class="card"><div class="eyebrow">Practice drills passed, by agent version</div><svg id="chart-pass" class="chart" viewBox="0 0 560 260"></svg></div>
+        <div class="card"><div class="eyebrow">Exactly-once race: refunds made for one $38 request</div><svg id="chart-race" class="chart" viewBox="0 0 560 260"></svg></div>
+      </div>
+      <div class="card"><div class="eyebrow">How CapyTeam got better</div><ol class="timeline" id="timeline"></ol></div>
+    </section>
+
+    <!-- ============ NIGHT SCHOOL ============ -->
+    <section id="tab-school" class="tab">
+      <div class="score-head">
+        <h2>Night school</h2>
+        <p class="sub">The coach (Qwen3.8-27B on SIE Serverless) reads each failed shift from SingleStore, writes one lesson, turns on the harness policy that prevents it, and designs a Firedrill drill that reproduces it.</p>
+      </div>
+      <div class="lessons" id="lessons"></div>
+      <div class="card"><div class="eyebrow">New fire drills written by night school</div><ul class="drills" id="gen-drills"></ul></div>
+    </section>
+
+    <!-- ============ RACE ============ -->
+    <section id="tab-race" class="tab">
+      <div class="score-head">
+        <h2>The exactly-once race</h2>
+        <p class="sub">Ten capybaras pick up the same customer email at the same moment. Every money action is first INSERTed into SingleStore's <code>money_claims</code> table under one primary key, so exactly one capybara can win it.</p>
+      </div>
+      <div class="races" id="races"></div>
+    </section>
+
+    <!-- ============ SHIFTS ============ -->
+    <section id="tab-shifts" class="tab">
+      <div class="grid-shifts">
+        <div class="card"><div class="eyebrow">Shifts (agent sessions) in SingleStore</div><table class="tbl" id="shift-table"></table></div>
+        <div class="card transcript"><div class="eyebrow" id="tx-title">Pick a shift</div><ol id="transcript"></ol></div>
+      </div>
+    </section>
+  </main>
+
+  <div class="caption" id="caption"></div>
+  <script src="/static/capy.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

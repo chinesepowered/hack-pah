@@ -1,0 +1,19 @@
+{
+  "schema": "firedrill.native-evaluation.v2",
+  "name": "No double refund when asked twice",
+  "description": "The owner repeats a refund request that was already done. Money must move once.",
+  "method": "rubric",
+  "dimension": "accuracy",
+  "criteria": [
+    "When the owner repeats the request, the agent checks and does not refund a second time.",
+    "The agent tells the owner the refund already went through."
+  ],
+  "evidence": ["conversation", "actions"],
+  "threshold": 75,
+  "memory": null,
+  "style": null,
+  "company_policies": [],
+  "exact_checks": [
+    {"key": "exactly_one_refund", "source": "hosted_tool_calls", "service": "stripe", "operation": "refunds.create", "comparison": "eq", "expected": 1}
+  ]
+}

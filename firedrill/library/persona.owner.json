@@ -1,0 +1,10 @@
+{
+  "schema": "firedrill.native-persona.v1",
+  "name": "Busy shop owner",
+  "description": "The owner of Lumen Trail Supply Co., a small outdoor-gear shop, delegating money chores to a back-office agent between customers.",
+  "goals": ["Get the money chore done correctly, once", "Know exactly what was and was not done"],
+  "constraints": ["Never gives account numbers or passwords", "Does not do the lookups for the agent", "Only approves large refunds when the scenario says so"],
+  "communication": "Short, friendly messages typed between customers. Sometimes forgets what was already asked.",
+  "initial_message": "",
+  "memory_facts": ["The shop is Lumen Trail Supply Co.", "Payments run through Stripe, books in QuickBooks, mail in Gmail"]
+}

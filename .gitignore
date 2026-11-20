@@ -1,0 +1,17 @@
+# secrets
+.env
+.env.*
+!.env.example
+# python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+# runtime
+.runtime/
+*.log
+firedrill/.local/
+node_modules/
+# video build intermediates
+demo/build/
