@@ -51,13 +51,15 @@ class Flags:
                 self._ok = False
             return self._ok
 
-    def statsig_group(self, unit_id: str) -> str | None:
+    def statsig_group(self, unit_id: str, log_exposure: bool = True) -> str | None:
         if not self._init():
             return None
         try:
             from statsig import StatsigUser, statsig
 
-            exp = statsig.get_experiment(StatsigUser(user_id=unit_id, custom_ids={"agent_session": unit_id}), settings.statsig_experiment)
+            user = StatsigUser(user_id=unit_id, custom_ids={"agent_session": unit_id})
+            get = statsig.get_experiment if log_exposure else statsig.get_experiment_with_exposure_logging_disabled
+            exp = get(user, settings.statsig_experiment)
             group = exp.get_group_name() if hasattr(exp, "get_group_name") else getattr(exp, "group_name", None)
             return group or None
         except Exception as e:  # noqa: BLE001

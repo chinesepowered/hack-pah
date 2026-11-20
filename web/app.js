@@ -41,7 +41,9 @@
         ["ok", `<b>SingleStore</b> ${o.db.includes("Helios") ? "Helios" : "local"} · ${o.events} events`],
         ["ok", `<b>SIE Serverless</b> Qwen3.8-27B + 5 task models`],
         ["ok", `<b>Amplitude</b> Agent Analytics`],
-        ["ok", `<b>Statsig</b> release: ${o.candidate ? o.candidate + " vs " + o.shipped : o.shipped}`],
+        o.experiment_provider === "statsig"
+          ? ["ok", `<b>Statsig</b> experiment: ${o.candidate ? o.candidate + " vs " + o.shipped : o.shipped + " shipped"}`]
+          : ["warn", `<b>Statsig</b> wired · ${o.candidate ? o.candidate + " vs " + o.shipped + " (hash split)" : o.shipped + " shipped"}`],
         ["ok", `<b>Firedrill</b> drills`],
         ["ok", `<b>Airbyte</b> live reads`],
       ];
@@ -200,7 +202,14 @@
     else if (e.kind === "lesson") { stats.lessons++; bubble(e.session_id, s, "guard"); }
     else if (e.kind === "tool_result") {
       if (s.startsWith("ok: stripe_create_refund")) { stats.refunds++; coin("bank", "home"); bubble(e.session_id, "Refund sent!", "good"); }
-      else if (s.startsWith("failed")) { bubble(e.session_id, s.replace(/^failed: /, "Uh oh: "), "bad"); if (/unavailable/i.test(s) && b === "bank") fire("bank"); }
+      else if (s.startsWith("failed")) {
+        const by = s.match(/"by": "([^"]+)"/);
+        if (/already_claimed/.test(s)) bubble(e.session_id, `${by ? by[1].replace(/ \(.*\)/, "") : "A teammate"} already did this one. Standing down.`, "guard");
+        else if (/needs_owner_approval/.test(s)) bubble(e.session_id, "Over $200: asking Maya first.", "guard");
+        else if (/payment_failed/.test(s)) bubble(e.session_id, "Refund didn't go through, so nothing gets booked.", "guard");
+        else bubble(e.session_id, clean(e).replace(/^failed: /, "Uh oh: "), "bad");
+        if (/unavailable/i.test(s) && b === "bank") fire("bank");
+      }
     } else if (e.kind === "tool_call") bubble(e.session_id, clean(e));
     else if (e.kind === "user" || e.kind === "assistant" || e.kind === "model") bubble(e.session_id, s);
     else if (e.kind === "end") {
@@ -216,6 +225,13 @@
     dayCard(e);
   }
   window.capEvent = onEvent;
+  window.capReset = () => {
+    for (const id of Object.keys(capys)) { capys[id].el.remove(); delete capys[id]; }
+    for (const k of Object.keys(occupancy)) { occupancy[k] = []; $(`#b-${k}`)?.classList.remove("busy"); }
+    stats.shifts = new Set(); stats.claims = 0; stats.blocked = 0; stats.lessons = 0; stats.refunds = 0;
+    $("#ticker").innerHTML = "";
+    window.__replayToken = (window.__replayToken || 0) + 1;
+  };
 
   // live stream or replay
   async function replay(prefixes, speed) {
@@ -224,8 +240,10 @@
     evs.sort((a, b) => (a.ts < b.ts ? -1 : a.ts > b.ts ? 1 : a.seq - b.seq));
     window.__replayTotal = evs.length;
     let prev = null;
+    const token = window.__replayToken || 0;
     for (const e of evs) {
-      const t = Date.parse(e.ts.replace(" ", "T") + "Z");
+      if ((window.__replayToken || 0) !== token) return;
+      const t = Date.parse(String(e.ts).replace(" ", "T").slice(0, 23) + "Z");
       if (prev !== null) await new Promise(r => setTimeout(r, Math.min(1400, Math.max(30, (t - prev) / speed))));
       prev = t;
       onEvent(e);
@@ -336,6 +354,11 @@
         <div class="meta" style="margin-top:6px">source shift <code>${esc(l.source_session)}</code></div>
       </div>`;
     }).join("") || `<div class="card">No lessons yet. Night school runs after a practice day.</div>`;
+    try {
+      const cb = await api("/api/casebook");
+      $("#casebook").innerHTML = (cb.answers || []).map(x => `<div class="qa"><div class="q">${esc(x.q)}</div><div class="a">${esc(String(x.a).slice(0, 700)).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>")}</div></div>`).join("")
+        || `<div class="meta">The casebook fills as shifts close (Cognee dataset <code>${esc(cb.dataset)}</code>).</div>`;
+    } catch (e) { /* casebook optional */ }
     $("#gen-drills").innerHTML = d.scenarios.map(s => `<li><b>${esc(s.name)}</b> <span class="meta">from <code>${esc(s.source_session)}</code></span></li>`).join("");
   }
 

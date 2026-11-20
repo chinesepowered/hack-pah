@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from typing import Any
 
 from .config import settings
@@ -58,12 +59,21 @@ LIVE_TOOLS = [
         {"entity": {"type": "string"}, "action": {"type": "string", "enum": ["list", "get", "search"]},
          "params": {"type": "object", "description": "e.g. {\"limit\": 50} or {\"id\": \"ch_...\"} or {\"created\": {\"gte\": 1700000000}}"}},
         ["entity", "action"]),
+    _fn("cognee_casebook", "Ask CapyTeam's Cognee casebook (knowledge graph of past shifts, incidents and lessons) what the team already knows, e.g. about a customer or a kind of problem.",
+        {"question": {"type": "string"}}, ["question"]),
     _fn("capyteam_ledger", "What CapyTeam itself did: money actions claimed and completed by capybaras (from SingleStore).",
         {"query": {"type": "string", "description": "optional charge id or customer to filter"}}, []),
 ]
 
 
 async def run_live_tool(s: Any, name: str, args: dict) -> tuple[Any, bool, str]:
+    if name == "cognee_casebook":
+        from . import cognee_memory
+
+        if not cognee_memory.enabled():
+            return {"note": "Cognee casebook is not configured."}, False, "school"
+        res = await cognee_memory.recall(str(args.get("question", "")), top_k=8)
+        return {"casebook": cognee_memory.answer_text(res, 2000)}, "error" not in str(res)[:40], "school"
     if name == "capyteam_ledger":
         like = f"%{args.get('query', '').strip()}%"
         rows = await db().rows(
@@ -103,6 +113,13 @@ async def run_live_tool(s: Any, name: str, args: dict) -> tuple[Any, bool, str]:
                 "id", "object", "name", "email", "customer", "charge", "amount", "amount_refunded", "refunded", "currency", "status",
                 "reason", "description", "created", "disputed", "arrival_date", "metadata", "available", "pending", "evidence_details")} for r in out]
         if isinstance(out, list):
+            for r in out:  # small models misread Unix timestamps; hand them dates
+                for k in ("created", "arrival_date"):
+                    if isinstance(r.get(k), (int, float)) and r[k] > 10**9:
+                        r[k] = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(r[k]))
+                ed = r.get("evidence_details")
+                if isinstance(ed, dict) and isinstance(ed.get("due_by"), (int, float)):
+                    ed["due_by"] = time.strftime("%Y-%m-%d %H:%M UTC", time.gmtime(ed["due_by"]))
             summary: dict[str, Any] = {"count": len(out)}
             amounts = [r.get("amount") for r in out if isinstance(r.get("amount"), (int, float))]
             if amounts:

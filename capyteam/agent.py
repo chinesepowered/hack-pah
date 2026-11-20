@@ -259,6 +259,12 @@ class Session:
         await self.flush_events()
         await self.persist(status=status)
         analytics.end(self)
+        try:
+            from . import cognee_memory
+
+            await cognee_memory.queue_shift(self)
+        except Exception as e:  # noqa: BLE001 - memory must never break a shift
+            log.warning("cognee queue failed: %s", e)
         await self.deps.close()
 
 

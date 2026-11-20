@@ -95,6 +95,19 @@ def _jsonify(rows: list[dict], *cols: str) -> list[dict]:
     return rows
 
 
+_STATSIG: dict[str, Any] = {"at": 0.0, "serving": False}
+
+
+async def _statsig_serving() -> bool:
+    """True only when Statsig itself returns a group for the release experiment (not the hash fallback)."""
+    from .flags import flags
+
+    if time.time() - _STATSIG["at"] > 60:
+        _STATSIG["serving"] = bool(await asyncio.to_thread(flags.statsig_group, "capyteam-probe", False))
+        _STATSIG["at"] = time.time()
+    return _STATSIG["serving"]
+
+
 @app.get("/api/overview")
 async def overview():
     versions = await memory.list_versions()
@@ -113,7 +126,8 @@ async def overview():
     shipped, candidate = await memory.release_state()
     return {"versions": versions, "drill_stats": stats, "race_stats": races, "costs": costs, "claims": claims,
             "duplicates_blocked": (blocked or {}).get("n", 0), "lessons": (lessons or {}).get("n", 0), "events": (events or {}).get("n", 0),
-            "shipped": shipped, "candidate": candidate, "db": db().label, "amplitude_events": analytics.sent}
+            "shipped": shipped, "candidate": candidate, "db": db().label, "amplitude_events": analytics.sent,
+            "experiment_provider": "statsig" if await _statsig_serving() else "capyteam-hash"}
 
 
 @app.get("/api/sessions")
@@ -176,6 +190,19 @@ async def lessons():
     rows = _jsonify(await memory.list_lessons(), "guard")
     scen = _jsonify(await db().rows("SELECT scenario_id, name, source_session, lesson_id, created_at FROM scenarios ORDER BY created_at"))
     return {"lessons": rows, "scenarios": scen}
+
+
+@app.get("/api/casebook")
+async def casebook(q: str | None = None):
+    """Cognee casebook: cached answers from scripts/casebook.py, or a live recall for ?q=..."""
+    from . import cognee_memory
+
+    if q:
+        res = await cognee_memory.recall(q, top_k=8)
+        return {"live": True, "answers": [{"q": q, "a": cognee_memory.answer_text(res, 1500)}], "dataset": cognee_memory.DATASET}
+    path = ROOT / ".runtime" / "casebook.json"
+    answers = json.loads(path.read_text()) if path.exists() else []
+    return {"live": False, "answers": answers, "dataset": cognee_memory.DATASET, "enabled": cognee_memory.enabled()}
 
 
 @app.get("/api/drills")

@@ -159,3 +159,10 @@ main { padding: 18px 26px 40px; }
 .caption { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); background: rgba(47,36,24,.92); color: #fff7ea; font-family: Fredoka, sans-serif; font-size: 26px; padding: 12px 22px; border-radius: 16px; max-width: 80%; text-align: center; opacity: 0; transition: opacity .4s; z-index: 50; pointer-events: none; }
 .caption.show { opacity: 1; }
 body.video .controls { display: none; }
+
+.casebook .qa { padding: 10px 0; border-bottom: 1px dashed var(--line); }
+.casebook .qa:last-child { border-bottom: 0; }
+.casebook .q { font-family: Fredoka, sans-serif; font-weight: 600; font-size: 16px; }
+.casebook .q::before { content: "Q "; color: #e07b39; }
+.casebook .a { margin-top: 4px; font-size: 14px; line-height: 1.5; color: #4a3b2b; white-space: pre-wrap; }
+.casebook .a::before { content: "Cognee: "; font-weight: 600; color: #2f9e8f; }

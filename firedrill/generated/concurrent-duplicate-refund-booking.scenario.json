@@ -1,0 +1,20 @@
+{
+  "schema": "firedrill.native-scenario.v1",
+  "name": "Night school drill: Race Condition Refund Drill",
+  "description": "Multiple agents processed the same customer request simultaneously because there was no mechanism to claim the task before execution, resulting in duplicate refunds, bookings, and emails.",
+  "instruction": "Send the same customer email to 5 different capybaras simultaneously and observe if only one executes the refund and booking. Open with: \"A new email from a customer about a damaged item just landed in the shared studio inbox. Please handle it right away: refund what they're owed and keep the books right.\"",
+  "personas": [
+    "@persona:maya"
+  ],
+  "evaluations": [
+    "@evaluation:generated/concurrent-duplicate-refund-booking"
+  ],
+  "conditions": [
+    "Generated from session race-v2-06 (lesson les_b94d790730)"
+  ],
+  "events": [],
+  "max_turns": 8,
+  "stop_rules": [
+    "Stop once the chore is clearly finished, refused, or the agent says it cannot do it."
+  ]
+}

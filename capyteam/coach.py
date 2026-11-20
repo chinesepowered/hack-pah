@@ -14,7 +14,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from . import amplitude_export, memory
+from . import amplitude_export, cognee_memory, memory
 from .config import ROOT, settings
 from .db import db, loads, now
 from .sie import Usage, sie
@@ -76,6 +76,13 @@ async def _evidence(drill: dict) -> str:
         for c in rc.get("by_capy", [])[:4]:
             lines.append(f"  {c['capy']} replied: {c['reply'][:160]}")
     lines.append("Failed checks:\n" + "\n".join(f"- {r['check']}" + (f" (judge: {r.get('why')})" if r.get("why") else "") for r in failed))
+    if cognee_memory.enabled():
+        related = await cognee_memory.recall(
+            f"Past CapyTeam incidents and lessons related to: scenario {drill['scenario']}; failed checks: "
+            + "; ".join(r["check"] for r in failed)[:600], top_k=6)
+        text = cognee_memory.answer_text(related, 1200)
+        if text and "error" not in str(related)[:40]:
+            lines.append("Cognee casebook (related past incidents and lessons): " + text)
     amp = await amplitude_export.session_signals(drill["session_id"])
     if amp and amp.get("enrichments"):
         lines.append("Amplitude Agent Analytics signals for this session: " + json.dumps(amp["enrichments"], default=str)[:1500])
@@ -190,6 +197,12 @@ async def night_school(base_version: str = "v1", *, new_version: str | None = No
             "ON DUPLICATE KEY UPDATE spec = VALUES(spec)",
             [f"gen-{slug}", files["scenario"]["name"], drill["session_id"], lid, "firedrill", files, now()],
         )
+        await cognee_memory.remember([
+            f"CapyTeam night-school case file {slug}. Scenario: {drill['scenario']}. Agent version {base_version} failed: "
+            + "; ".join(r["check"] for r in (loads(drill.get("results"), {}) or {}).get("results", []) if not r.get("passed"))
+            + f". Diagnosis: {d.get('diagnosis', '')} Lesson learned ({lid}): {title}: {rule} "
+            + f"Harness policies switched on: {', '.join(d.get('guards') or []) or 'none'}. Fixed in version {new_version}."],
+            node_set=["night_school", slug])
         report.append({"scenario": drill["scenario"], "session": drill["session_id"], "failure": d.get("failure_slug"),
                        "diagnosis": d.get("diagnosis"), "lesson_id": lid, "lesson": f"{title}: {rule}", "reused": reused,
                        "guards": d.get("guards", []), "new_drill": f"firedrill/generated/{slug}.scenario.json"})

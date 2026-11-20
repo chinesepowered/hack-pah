@@ -50,7 +50,7 @@
       <div class="controls" id="controls">
         <span class="hint">Run things live:</span>
         <button data-run="day" data-version="v1">Practice day (v1)</button>
-        <button data-run="day" data-version="">Practice day (Statsig split)</button>
+        <button data-run="day" data-version="">Practice day (experiment split)</button>
         <button data-run="race" data-version="">Race: 10 capybaras, 1 email</button>
         <button data-run="night">Night school</button>
         <span class="job" id="job"></span>
@@ -78,6 +78,7 @@
         <p class="sub">The coach (Qwen3.8-27B on SIE Serverless) reads each failed shift from SingleStore, writes one lesson, turns on the harness policy that prevents it, and designs a Firedrill drill that reproduces it.</p>
       </div>
       <div class="lessons" id="lessons"></div>
+      <div class="card casebook" id="casebook-card"><div class="eyebrow">Cognee casebook · knowledge graph of every shift, incident and lesson</div><div id="casebook"></div></div>
       <div class="card"><div class="eyebrow">New fire drills written by night school</div><ul class="drills" id="gen-drills"></ul></div>
     </section>
 
