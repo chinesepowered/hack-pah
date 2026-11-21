@@ -2,9 +2,9 @@
 
 **Your back office, run by a team of capybara agents that get better every night.**
 
-[![CapyTeam: ten capybara agents race for one refund, and exactly one wins the claim](docs/capyteam.gif)](demo/capyteam-demo.mp4)
+[![CapyTeam: ten capybara agents race for one refund, and exactly one wins the claim](docs/capyteam.gif)](https://www.youtube.com/watch?v=YN2zre-Zia4)
 
-▶ **Watch the 3-minute demo:** [`demo/capyteam-demo.mp4`](demo/capyteam-demo.mp4)
+▶ **Watch the 3-minute demo:** [YouTube](https://www.youtube.com/watch?v=YN2zre-Zia4) · [`demo/capyteam-demo.mp4`](demo/capyteam-demo.mp4)
 
 CapyTeam is a team of AI agents that runs a small shop's back office: refunds, invoices and bookkeeping across Stripe, QuickBooks and Gmail. Every shift is an agent session that we store, score and replay, so mistakes show up in drills instead of in a customer's bank account. Each night a coach turns every failed session into a lesson and a policy that the harness enforces in code, then ships the new version as an experiment. In three versions the team went from 4 of 7 chores done right to 7 of 7, and from paying the same refund twice to paying it exactly once with ten agents racing for it.
 
